@@ -2,8 +2,8 @@ FROM openjdk:25-jdk-slim
 
 WORKDIR /app
 
-COPY target/user-1.0.0.jar app.jar
+COPY target/itinerary-1.0.0.jar app.jar
 
-EXPOSE 8081
+EXPOSE 8082
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

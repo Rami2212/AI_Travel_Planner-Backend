@@ -9,12 +9,18 @@
         <outputRelativeToContentRoot value="true" />
         <module name="user" />
         <module name="gateway" />
+        <module name="itinerary" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="itenerary" target="24" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="gateway" options="-parameters" />
+      <module name="itenerary" options="-parameters" />
+      <module name="itinerary" options="-parameters" />
       <module name="user" options="-parameters" />
     </option>
   </component>
