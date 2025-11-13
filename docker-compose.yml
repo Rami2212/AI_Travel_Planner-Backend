@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: travel-postgres
+    environment:
+      POSTGRES_DB: travel_planner
+      POSTGRES_USER: travel_user
+      POSTGRES_PASSWORD: travel_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - travel-network
+
+  # Kafka Zookeeper
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: travel-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - travel-network
+
+  # Kafka Broker
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: travel-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+    networks:
+      - travel-network
+
+  # Gateway Service
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: travel-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - user
+      - itinerary
+    networks:
+      - travel-network
+
+  # User Service
+  user:
+    build:
+      context: ./user
+      dockerfile: Dockerfile
+    container_name: travel-user-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/travel_planner
+      SPRING_DATASOURCE_USERNAME: travel_user
+      SPRING_DATASOURCE_PASSWORD: travel_pass
+    depends_on:
+      - postgres
+    networks:
+      - travel-network
+
+  # Itinerary Service
+  itinerary:
+    build:
+      context: ./itinerary
+      dockerfile: Dockerfile
+    container_name: travel-itinerary-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/travel_planner
+      SPRING_DATASOURCE_USERNAME: travel_user
+      SPRING_DATASOURCE_PASSWORD: travel_pass
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - postgres
+      - kafka
+    networks:
+      - travel-network
+
+  # AI Service
+  ai:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: travel-ai-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
+    depends_on:
+      - kafka
+    networks:
+      - travel-network
+
+volumes:
+  postgres_data:
+
+networks:
+  travel-network:
+    driver: bridge
